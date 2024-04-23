@@ -1,66 +1,79 @@
-const { getPrefix, getStreamFromURL, uploadImgbb } = global.utils;
-async function ai({ message: m, event: e, args: a, usersData: u }) {
-  var p = [`${await getPrefix(e.threadID)}${this.config.name}`,
-`${this.config.name}`
-/*"ai"
-*you can add more prefix here
-*/
-]; 
- if (p.some(b => a[0].toLowerCase().startsWith(b))) {
-try {      
-let prompt = "";
-if (e.type === "message_reply" && e.messageReply.attachments && e.messageReply.attachments[0]?.type === "photo") {
- const b = await uploadImgbb(e.messageReply.attachments[0].url);
-prompt = a.slice(1).join(" ") + ' ' + b.image.url;
-} else {
- prompt = a.slice(1).join(" ");
-}
- var __ = [{ id: e.senderID, tag: await u.getName(e.senderID) }];
- const r = await require("axios").post(`https://test-ai-ihc6.onrender.com/api`, {
-  prompt: prompt,
- apikey: "GayKey-oWHmMb1t8ASljhpgSSUI",
-  name: __[0]['tag'],
- id: __[0]['id'],
- });
-var _ = r.data.result.replace(/{name}/g, __[0]['tag']).replace(/{pn}/g, p[0]);
- if (r.data.av) {
- if (Array.isArray(r.data.av)) {
- const avs = r.data.av.map(url => getStreamFromURL(url));
- const avss = await Promise.all(avs);
-  m.reply({
- body: _,
- mentions: __,
- attachment: avss
- });
- } else {
- m.reply({
- body: _,
- mentions: __,
-attachment: await getStreamFromURL(r.data.av)
-  });
-  }
-  } else {
-m.reply({
-body: _,
-mentions: __
-  });
-  }
-  } catch (error) {
- m.reply("Error " + error);
- }
- }
-}
+const axios = require('axios');
+
+const Prefixes = [
+  'gpt',
+  'ai',
+  'What',
+  ',ai',
+];
+
 module.exports = {
-config: {
- name: "ai",
-aliases: [],
-version: 1.6,
-author: "Jun",
-role: 0,
- shortDescription: "An AI that can do various tasks",
- guide: "{pn} <query>",
- category: "AI"
- },
- onStart: function() {},
- onChat: ai
+  config: {
+    name: 'ai',
+    version: '2.5.4',
+    author: 'Kylepogi',//credits owner of this api
+    role: 0,
+    category: 'ai',
+    shortDescription: {
+      en: 'Asks an AI for an answer.',
+    },
+    longDescription: {
+      en: 'Asks an AI for an answer based on the user prompt.',
+    },
+    guide: {
+      en: '{pn} [prompt]',
+    },
+  },
+
+  langs: {
+    en: {
+      final: "𝗞𝗬𝗟𝗘'𝗦 𝗕𝗢𝗧 ",
+      loading: "𝗞𝗬𝗟𝗘'𝗦 𝗕𝗢𝗧 \n❍━━━━━━━━━━━━━━━━━━❏\n⏳ |        🕗 | 𝗦𝗘𝗔𝗥𝗖𝗛𝗜𝗡𝗚 𝗬𝗢𝗨𝗥 𝗤𝗨𝗘𝗦𝗧𝗜𝗢𝗡 𝗣𝗟𝗘𝗔𝗦𝗘 𝗪𝗔𝗜𝗧..........\n❍━━━━━━━━━━━━━━━━━━❏\n"
+    }
+  },
+
+  onStart: async function () {},
+
+  onChat: async function ({ api, event, args, getLang, message }) {
+    try {
+      const prefix = Prefixes.find((p) => event.body && event.body.toLowerCase().startsWith(p));
+
+      if (!prefix) {
+        return;
+      }
+
+      const prompt = event.body.substring(prefix.length).trim();
+
+      if (prompt === '') {
+
+        await message.reply(
+          "❏   𝙝𝙚𝙡𝙡𝙤 𝙄 𝙖𝙢 𝙯𝙚𝙥𝙝𝙮𝙧𝙪𝙨 𝘼𝙞 𝙄 𝙬𝙖𝙨 𝙘𝙧𝙚𝙖𝙩𝙚𝙙 𝙗𝙮 𝙆𝙮𝙡𝙚 𝘽𝙖𝙞𝙩-𝙞𝙩 𝙝𝙚'𝙨 19 𝙮𝙚𝙖𝙧𝙨 𝙤𝙡𝙙 𝙞𝙨 𝙨𝙤 𝙝𝙖𝙣𝙙𝙨𝙤𝙢𝙚 𝙝𝙚'𝙨 𝙡𝙞𝙫𝙚 𝙞𝙣 𝘿𝙞𝙥𝙤𝙡𝙤𝙜 𝘾𝙞𝙩𝙮 ❏"  
+        );
+        
+        return;
+      }
+
+      const loadingMessage = getLang("loading");
+      const loadingReply = await message.reply(loadingMessage);
+      const url = "https://hercai.onrender.com/v3/hercai"; // Replace with the new API endpoint
+      const response = await axios.get(`${url}?question=${encodeURIComponent(prompt)}`);
+
+      if (response.status !== 200 || !response.data) {
+        throw new Error('Invalid or missing response from API');
+      }
+
+      const messageText = response.data.reply.trim(); // Adjust according to the response structure of the new API
+      const userName = getLang("final");
+      const finalMsg = `${userName}\n❍━━━━━━━━━━━━━━━━━━❏\n${messageText}\n❍━━━━━━━━━━━━━━━━━━━━❏\n`;
+      api.editMessage(finalMsg, loadingReply.messageID);
+
+      console.log('Sent answer as a reply to user');
+    } catch (error) {
+      console.error(`Failed to get answer: ${error.message}`);
+      api.sendMessage(
+        `${error.message}.\n\nYou can try typing your question again or resending it, as there might be a bug from the server that's causing the problem. It might resolve the issue.`,
+        event.threadID
+      );
+    }
+  },
 };

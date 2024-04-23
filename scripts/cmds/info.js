@@ -45,8 +45,8 @@ module.exports = {
     const authorFB = global.GoatBot.config.authorFB;
     const authorInsta = "N/A";
     const authorEmail = global.GoatBot.config.authorEmail;
-    const authorGithub = "N/A";
-    const status = "𝙎𝙞𝙣𝙜𝙡𝙚";
+    const authorGithub = "GitHub team";
+    const status = "I have a girlfriend.";
     const timeStart = Date.now();
 
     const urls = JSON.parse(fs.readFileSync('scripts/cmds/xnil/info.json'));
